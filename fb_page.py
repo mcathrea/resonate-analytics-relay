@@ -10,15 +10,10 @@ async def get_fb_page_data(
 ) -> Dict[str, Any]:
     try:
         async with httpx.AsyncClient() as client:
-            # Step 1: Exchange System User token for Page Access Token
-            r = await client.get(
-                f"{GRAPH_BASE}/{page_id}",
-                params={"fields": "access_token", "access_token": token},
-            )
-            r.raise_for_status()
-            page_token = r.json()["access_token"]
+            # System User tokens can call Page Insights directly — no page token exchange needed.
+            # The exchange requires pages_manage_metadata scope which System Users typically lack.
 
-            # Step 2: Fetch Page Insights — daily values, summed over period
+            # Step 1: Fetch Page Insights — daily values, summed over period
             r = await client.get(
                 f"{GRAPH_BASE}/{page_id}/insights",
                 params={
@@ -26,7 +21,7 @@ async def get_fb_page_data(
                     "period": "day",
                     "since": since,
                     "until": until,
-                    "access_token": page_token,
+                    "access_token": token,
                 },
             )
             r.raise_for_status()
@@ -34,21 +29,21 @@ async def get_fb_page_data(
             for metric in r.json()["data"]:
                 sums[metric["name"]] = sum(v["value"] for v in metric["values"])
 
-            # Step 3: Fetch current total followers (point-in-time)
+            # Step 2: Fetch current total followers (point-in-time)
             r = await client.get(
                 f"{GRAPH_BASE}/{page_id}",
-                params={"fields": "fan_count", "access_token": page_token},
+                params={"fields": "fan_count", "access_token": token},
             )
             r.raise_for_status()
             total_followers = r.json()["fan_count"]
 
-            # Step 4: Fetch top 3 posts by reach
+            # Step 3: Fetch top 3 posts by reach
             r = await client.get(
                 f"{GRAPH_BASE}/{page_id}/posts",
                 params={
                     "fields": "message,post_impressions_unique",
                     "limit": "20",
-                    "access_token": page_token,
+                    "access_token": token,
                 },
             )
             r.raise_for_status()
