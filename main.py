@@ -39,5 +39,20 @@ async def post_to_teams(webhook_url: str, message: str) -> dict:
     return await _post_to_teams(webhook_url, message)
 
 
-# ASGI app object for gunicorn: gunicorn -w 1 -k uvicorn.workers.UvicornWorker main:app
-app = mcp.sse_app()
+class _HostHeaderMiddleware:
+    """Rewrite Host header to localhost so MCP SDK's DNS-rebinding check passes."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] in ("http", "websocket"):
+            scope["headers"] = [
+                (b"host", b"localhost") if k == b"host" else (k, v)
+                for k, v in scope["headers"]
+            ]
+        await self.app(scope, receive, send)
+
+
+# ASGI app object for gunicorn: python -m gunicorn -w 1 -k uvicorn.workers.UvicornWorker main:app
+app = _HostHeaderMiddleware(mcp.sse_app())
