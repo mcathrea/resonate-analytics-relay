@@ -6,6 +6,15 @@ from teams import post_to_teams as _post_to_teams
 
 mcp = FastMCP("resonate-analytics-relay")
 
+# Disable DNS-rebinding host check — server runs behind Azure's TLS termination
+try:
+    from mcp.server.transport_security import TransportSecuritySettings
+    mcp.settings.transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=False
+    )
+except Exception:
+    pass  # Older SDK versions don't have this setting
+
 
 @mcp.tool()
 async def get_fb_page_data(token: str, page_id: str, since: str, until: str) -> dict:
@@ -39,20 +48,5 @@ async def post_to_teams(webhook_url: str, message: str) -> dict:
     return await _post_to_teams(webhook_url, message)
 
 
-class _HostHeaderMiddleware:
-    """Rewrite Host header to localhost so MCP SDK's DNS-rebinding check passes."""
-
-    def __init__(self, app) -> None:
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] in ("http", "websocket"):
-            scope["headers"] = [
-                (b"host", b"localhost") if k == b"host" else (k, v)
-                for k, v in scope["headers"]
-            ]
-        await self.app(scope, receive, send)
-
-
 # ASGI app object for gunicorn: python -m gunicorn -w 1 -k uvicorn.workers.UvicornWorker main:app
-app = _HostHeaderMiddleware(mcp.sse_app())
+app = mcp.sse_app()
