@@ -91,5 +91,11 @@ async def get_ig_data(
                 "total_followers": total_followers,
                 "top_posts": top_posts,
             }
+    except httpx.HTTPStatusError as e:
+        try:
+            meta_error = e.response.json()
+            return {"error": f"HTTP {e.response.status_code}: {meta_error}"}
+        except Exception:
+            return {"error": f"HTTP {e.response.status_code}: {e.response.text}"}
     except Exception as e:
         return {"error": str(e)}
