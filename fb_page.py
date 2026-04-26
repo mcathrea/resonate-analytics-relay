@@ -17,7 +17,7 @@ async def get_fb_page_data(
             r = await client.get(
                 f"{GRAPH_BASE}/{page_id}/insights",
                 params={
-                    "metric": "page_impressions_unique,page_impressions,page_follows,page_views_total",
+                    "metric": "page_impressions_unique,page_impressions,page_views_total",
                     "period": "day",
                     "since": since,
                     "until": until,
@@ -64,7 +64,7 @@ async def get_fb_page_data(
             return {
                 "reach": sums.get("page_impressions_unique", 0),
                 "impressions": sums.get("page_impressions", 0),
-                "new_followers": sums.get("page_follows", 0),
+                "new_followers": 0,  # page_follows deprecated in Graph API v21 — omitted
                 "profile_views": sums.get("page_views_total", 0),
                 "total_followers": total_followers,
                 "top_posts": top_posts,
