@@ -1,5 +1,6 @@
 # main.py
 from mcp.server.fastmcp import FastMCP
+from ads_data import get_ads_data as _get_ads_data
 from fb_page import get_fb_page_data as _get_fb_page_data
 from ig_data import get_ig_data as _get_ig_data
 from teams import post_to_teams as _post_to_teams
@@ -14,6 +15,29 @@ try:
     )
 except Exception:
     pass  # Older SDK versions don't have this setting
+
+
+@mcp.tool()
+async def get_ads_data(
+    token: str,
+    ad_account_id: str,
+    since: str,
+    until: str,
+    prior_since: str = "",
+    prior_until: str = "",
+) -> dict:
+    """Fetch active Meta Ads campaign insights for a date range.
+
+    Returns campaign_count, total_spend (CAD float), total_reach (int),
+    and a campaigns list with per-campaign id, name, objective,
+    daily_budget_cents, and current/prior period metrics (spend, reach, impressions).
+    prior_since / prior_until are optional — used by the anomaly alert for comparison.
+    On error, returns {"error": "<description>"}.
+    """
+    return await _get_ads_data(
+        token, ad_account_id, since, until,
+        prior_since or None, prior_until or None,
+    )
 
 
 @mcp.tool()
